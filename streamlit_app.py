@@ -4,20 +4,22 @@ import streamlit as st
 import folium 
 from streamlit_folium import st_folium 
 
+
 # Configuration de la page Streamlit
-st.set_page_config(page_title="Sales Dashboard",
-                   page_icon=":bar_chart:",
-                   layout="wide")
+st.set_page_config(
+    page_title="Sales Dashboard",
+    page_icon=":bar_chart:",
+    layout="wide"
+)
 
 @st.cache_data
 def get_data_from_excel1():
-    # Lire les données depuis le fichier Excel
     df = pd.read_excel(
-        io="DATA.xlsx",          # Fichier Excel
-        engine="openpyxl",      # Utilisation de l'engine 'openpyxl'
-        sheet_name="Base_avec_formules",  # Nom de la feuille à lire
-        usecols="A:M",          # Colonnes à utiliser
-        nrows=1000              # Nombre de lignes à lire
+        io="DATA.xlsx",
+        engine="openpyxl",
+        sheet_name="Base_avec_formules",
+        usecols="A:M",
+        nrows=1000
     )
     return df
 
@@ -26,16 +28,22 @@ def get_data_from_excel1():
 def get_data_from_excel2():
     df2 = pd.read_excel(
         io="DATA.xlsx",
-        engine="openpyxl",      # Correction de l'orthographe
+        engine="openpyxl",
         sheet_name="Objectifs",
-        usecols="A:M",
         nrows=10
     )
-    return df2 
+    return df2
+
 
 # Chargement des données
 df = get_data_from_excel1()
-df2 = get_data_from_excel2() 
+df2 = get_data_from_excel2()
+
+# Vérification temporaire des données
+st.write("Données principales :", df.head())
+st.write("Données des objectifs :", df2.head())
+
+
 
 # Fusionner les deux DataFrames
 df_merge = df.merge(df2, on="Produits", how="left")  # join des 2 sheets (feuilles) 
@@ -59,9 +67,15 @@ ville = st.sidebar.multiselect(
 )
 
 # Sélection des données selon les filtres
-df_selection = df_merge.query(
-    "Villes == @ville & Produits == @produit"  # Correction pour respecter la casse
-)
+#df_selection = df_merge.query(
+    #"Villes == @ville & Produits == @produit"  # Correction pour respecter la casse
+#)
+
+df_selection = df_merge[
+    df_merge["Villes"].isin(ville)
+    & df_merge["Produits"].isin(produit)
+]
+
 
 # Vérifions si le DataFrame est vide
 if df_selection.empty:
@@ -173,9 +187,41 @@ right_column2.plotly_chart(fig_col_revenu_brut, use_container_width=True)
 
 st.header("CA par ville")
 
-#Calcul la chiffre d'affaires total par ville 
+#Calcul du  chiffre d'affaires total par ville 
 
-CA_par_ville = df_selection.groupby(by=["Villes"])[["Chiffre_d'affaires"]].sum().reset_index() 
+#CA_par_ville = df_selection.groupby(by=["Villes"])[["Chiffre_d'affaires"]].sum().reset_index() 
+
+
+# Calcul du chiffre d'affaires par ville
+CA_par_ville = (
+    df_selection.groupby("Villes", as_index=False)
+    .agg({
+        "Chiffre_d'affaires": "sum",
+        "Latitude_Ville": "first",
+        "Longitude_Ville": "first"
+    })
+)
+
+CENTER = (46, 2.18883335)
+
+carte = folium.Map(
+    location=CENTER,
+    zoom_start=6
+)
+
+# Ajouter les marqueurs
+for _, row in CA_par_ville.iterrows():
+    folium.Marker(
+        location=[
+            row["Latitude_Ville"],
+            row["Longitude_Ville"]
+        ],
+        popup=f'{row["Villes"]} : {row["Chiffre_d'affaires"]:,.0f} €',
+        tooltip=f'Chiffre d’affaires : {row["Villes"]}'
+    ).add_to(carte)
+
+st_folium(carte, width=725)
+
 
 #Recupérer latitude, longitude, villes, CA dans une liste 
 list = list(zip(df_selection["Latitude_Ville"], df_selection["Longitude_Ville"], df_selection["Villes"]))
