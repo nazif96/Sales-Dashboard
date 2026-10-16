@@ -39,11 +39,6 @@ def get_data_from_excel2():
 df = get_data_from_excel1()
 df2 = get_data_from_excel2()
 
-# Vérification temporaire des données
-st.write("Données principales :", df.head())
-st.write("Données des objectifs :", df2.head())
-
-
 
 # Fusionner les deux DataFrames
 df_merge = df.merge(df2, on="Produits", how="left")  # join des 2 sheets (feuilles) 
@@ -250,6 +245,12 @@ hide_st_style = """
             </style>
             """ 
 st.markdown(hide_st_style, unsafe_allow_html= True) 
+
+
+# Vérification temporaire des données
+st.write("Données principales :", df.head())
+st.write("Données des objectifs :", df2.head())
+
 
 # pour lancer l'appli en local executer dans le terminale le code suivant : python -m streamlit run streamlit_app.py
 
